@@ -10,14 +10,16 @@
 
 ---
 
-## � Deskripsi Proyek
+## 🛡️ Deskripsi Proyek
 Sistem ini adalah implementasi **Intrusion Detection System (IDS)** Berbasis Anomaly Detection menggunakan Machine Learning. Sistem dirancang secara modular dengan arsitektur modern yang memisahkan Backend, Frontend, dan Data Simulation.
 
 ### Fitur Utama
-1.  **Backend API (FastAPI)**: Server inferensi berkinerja tinggi yang memuat model XGBoost.
-2.  **Modern Dashboard (Next.js 14 + Shadcn UI)**: Antarmuka visual yang real-time, responsif, dan estetis untuk memantau lalu lintas jaringan.
-3.  **Real-time Simulation**: Skrip Python yang mensimulasikan karakteristik serangan (DDoS, Brute Force, Botnet) untuk pengujian langsung.
-4.  **Reproducibility**: Dikemas dengan panduan instalasi lengkap untuk memastikan dapat dijalankan di lingkungan apa pun.
+1.  **Dual Frontend Architecture**:
+    *   **Primary (Next.js 14 + Shadcn UI)**: Antarmuka visual state-of-the-art dengan animasi Framer Motion, Recharts, dan desain responsif.
+    *   **Fallback (Streamlit)**: Dashboard Python native yang berfungsi penuh sebagai backup otomatis jika Node.js tidak tersedia.
+2.  **Backend API (FastAPI)**: Server inferensi berkinerja tinggi yang memuat model XGBoost.
+3.  **Real-time Attack Simulation**: Engine simulasi serangan yang secara acak mengenerate tindakan mitigasi (Blocking, Throttling, Quarantine) berdasarkan prediksi model.
+4.  **Auto-Recovery & Fallback**: Script launcher cerdas (`main.py`) yang mendeteksi lingkungan sistem dan memilih mode operasi yang sesuai.
 
 ---
 
@@ -30,55 +32,42 @@ Berikut adalah struktur file proyek ini:
 ├── .gitignore
 ├── feature_list.txt            # Daftar 69 fitur yang digunakan model
 ├── inspect_models.py           # Script utilitas inspeksi model
-├── main.py                     # 🚀 LAUNCHER UTAMA (Jalankan ini!)
+├── main.py                     # 🚀 LAUNCHER UTAMA (Integrated Launcher)
 ├── README.md                   # Dokumentasi ini
 ├── requirements.txt            # Dependensi Python
 ├── src/
 │   ├── app/
 │   │   ├── __pycache__/
 │   │   ├── api.py              # Backend FastAPI (Port 8000)
-│   │   ├── dummy_data_stream.py# Simulator Trafik (Client)
 │   │   ├── model_loader.py     # Logic Loading Model & Scaler
 │   │   ├── type_definitions.py # Skema Validasi Data (Pydantic)
 │   │   └── web/
-│   │       ├── streamlit.py    # (Legacy/Deprecated) Dashboard lama
-│   │       └── ddos-protection-full/   # 🌟 DASHBOARD UTAMA (Next.js)
+│   │       ├── streamlit.py    # 🛡️ STREAMLIT DASHBOARD (Fallback UI)
+│   │       └── ddos-protection-full/   # 🌟 NEXT.JS DASHBOARD (Primary UI)
 │   │           ├── src/
 │   │           │   ├── app/
-│   │           │   │   ├── globals.css     # Styling (Tailwind v3)
-│   │           │   │   ├── layout.tsx
-│   │           │   │   └── page.tsx        # Logic Dashboard
+│   │           │   │   ├── globals.css     # Styling
+│   │           │   │   └── page.tsx        # Logic Dashboard (React)
 │   │           │   ├── components/ui/      # Komponen Shadcn
-│   │           │   └── lib/utils.ts
-│   │           ├── public/
-│   │           ├── .gitignore
-│   │           ├── next.config.ts
-│   │           ├── package.json
-│   │           ├── postcss.config.mjs
-│   │           ├── tailwind.config.ts
-│   │           └── tsconfig.json
+│   │           │   └── ...
 │   └── models_dev/
 │       ├── datasets/           
 │       ├── models/             # Artefak Model Siap Pakai
-│       │   ├── decision_tree.joblib
-│       │   ├── logistic_regression.joblib
-│       │   ├── random_forest.joblib
 │       │   ├── scaler.joblib   # Scaler (StandardScaler)
 │       │   └── xgboost.joblib  # Model Utama (XGBoost)
 │       └── notebooks/
-│           └── 36230035_KeamananData_UAS_Final.ipynb  # Notebook Eksperimen & Training
+│           └── 36230035_KeamananData_UAS_Final.ipynb  # Notebook Eksperimen
 ```
 
 ---
 
 ## 🛠️ Panduan Instalasi & Reproducibility (Wajib Dibaca)
 
-Ikuti langkah-langkah ini secara berurutan untuk menjalankan sistem.
+Sistem ini memiliki mekanisme **Automatic Fallback**. Artinya, sistem akan berusaha menjalankan versi terbaik (Next.js), namun jika gagal, akan otomatis beralih ke versi aman (Streamlit).
 
 ### 1. Prasyarat
-- **Python 3.10+**
-- **Node.js 18+** & **nam**
-- **Internet Acccess** (untuk mengunduh library)
+- **Python 3.10+** (Wajib)
+- **Node.js 18+** (Opsional - Jika ada, tampilan Next.js akan aktif)
 
 ### 2. Setup Environment Python
 Install seluruh library Python yang dibutuhkan dari root directory:
@@ -87,8 +76,8 @@ Install seluruh library Python yang dibutuhkan dari root directory:
 pip install -r requirements.txt
 ```
 
-### 3. Setup Environment Frontend (Next.js)
-Anda **WAJIB** melakukan instalasi di folder web terlebih dahulu agar dashboard bisa berjalan.
+### 3. Setup Environment Frontend (Opsional tapi Disarankan)
+Jika Anda memiliki Node.js, lakukan langkah ini agar tampilan UI maksimal:
 
 ```bash
 # 1. Masuk ke direktori web
@@ -101,52 +90,51 @@ npm install
 cd ../../../..
 ```
 
-*(Pastikan kembali ke folder `36230035_KeamananData_UAS` sebelum lanjut)*
+---
 
-### 4. Menjalankan Sistem
-Cukup jalankan satu perintah ini. Script ini akan menyalakan API, Dashboard, dan Simulator sekaligus.
+## 🚀 Cara Menjalankan Sistem
+Cukup jalankan satu perintah ini. Launcher cerdas kami akan menangani sisanya.
 
 ```bash
 python main.py
 ```
 
-Tunggu beberapa detik hingga muncul pesan `[SUCCESS] All Systems Operational`.
+### Apa yang terjadi saat perintah ini dijalankan?
+1.  **API Check**: Backend FastAPI dinyalakan pada port 8000.
+2.  **Environment Check**: Script mengecek apakah `npm` terinstall di komputer Anda.
+    *   **Kondisi A (Node.js Ada)**: Menjalankan Streamlit (Port 8501) DAN Next.js (Port 3000). Anda bisa memilih antarmuka yang disukai.
+    *   **Kondisi B (Node.js Tidak Ada / Error)**: Menjalankan Streamlit (Port 8501) saja.
+3.  **Logs**: Terminal akan menampilkan status live dari semua layanan.
 
 ---
 
 ## 🖥️ Akses Aplikasi
 
-| Komponen | URL / Port | Deskripsi |
-| :--- | :--- | :--- |
-| **Web Dashboard** | **http://localhost:3000** | Antarmuka monitoring utama. Buka di browser. |
-| **API Server** | http://localhost:8000 | Backend server. Endpoint `/docs` tersedia untuk Swagger UI. |
-| **Traffic Simulator** | (Background Process) | Berjalan di terminal, mencetak log pengiriman data. |
+Setelah status `[SUCCESS]`, akses dashboard melalui:
+
+| Komponen | Priority | URL | Fitur |
+| :--- | :--- | :--- | :--- |
+| **Next.js Dashboard** | Utama | **http://localhost:3000** | Animasi framer-motion, UI Premium, Interaktivitas Penuh. |
+| **Streamlit Dashboard** | Fallback | **http://localhost:8501** | UI Native Python, Ringan, Logic Mirroring 100%. |
+| **API Server** | Backend | http://localhost:8000 | Endpoint inferensi utama. |
+| **API Health** | Monitor | http://localhost:8000/health | Cek status model loading. |
 
 ---
 
-## � Dataset (Sumber Data)
+## 🧠 Detail Teknis: Streamlit Mirroring
+Sebagai bagian dari pembaruan ini, `streamlit.py` telah ditulis ulang sepenuhnya untuk **meniru 100% logika dan tampilan** dari `page.tsx` (Next.js).
 
-Model dilatih menggunakan dataset **CSE-CIC-IDS2018**.
-Jika Anda ingin menjalankan ulang Notebook pelatihan (`src/models_dev/notebooks/36230035_KeamananData_UAS_Final.ipynb`), silakan unduh dataset dari Kaggle:
-
-1.  **URL**: [Kaggle CSE-CIC-IDS2018](https://www.kaggle.com/datasets/soleshuc/cse-cic-ids2018)
-2.  **Instruksi**:
-    - Download file, ekstrak.
-    - Letakkan file `.parquet` atau `.csv` di folder `src/models_dev/datasets/`.
-    - Sesuaikan path di notebook jika perlu.
-
-*Catatan: Sistem ini sudah menyertakan model terlatih (`xgboost.joblib`), jadi Anda TIDAK perlu mengunduh dataset untuk sekadar menjalankan aplikasi demo.*
+*   **Identitas Header**: Ditambahkan header custom HTML/CSS dengan detail Nama/NIM.
+*   **Visual Similarity**: Menggunakan custom CSS injection untuk meniru tema "Dark Slate" dari Shadcn UI.
+*   **Logic Parity**:
+    *   Simulasi mitigasi ancaman (Block/Throttle/Quarantine) diporting dari TypeScript ke Python.
+    *   Metrik (Total Analyzed, Benign, Threat Rate) dihitung dengan rumus identik.
+    *   Visualisasi grafik (Area Chart & Pie Chart) menggunakan Plotly untuk meniru Recharts.
+*   **Realtime**: Menggunakan `st.rerun()` loop untuk update otomatis setiap 2 detik.
 
 ---
 
-## � Catatan Penting
-- **Port Conflict**: Jika port 3000 atau 8000 sedang dipakai, matikan aplikasi lain atau edit `main.py`.
-- **Tailwind Version**: Dashboard ini menggunakan Tailwind v3 agar kompatibel dengan Shadcn UI. Jangan di-upgrade ke v4 manual.
-- **Model Input**: Model menerima 69 fitur spesifik (lihat `feature_list.txt`).
-
----
 **Tugas UAS Keamanan Data 2025**
-
 | Identitas | Detail |
 | :--- | :--- |
 | **Nama** | **Josia Given Santoso** |

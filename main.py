@@ -1,100 +1,152 @@
 import subprocess
-import time
 import sys
 import os
 import signal
-from pathlib import Path
+import time
+import shutil
+import platform
+import webbrowser
 
-# Paths relative to this script (assumed to be in project root)
-BASE_DIR = Path(__file__).resolve().parent
-SRC_DIR = BASE_DIR / "src"
+# Configuration
+API_PORT = 8000
+STREAMLIT_PORT = 8501
+NEXTJS_PORT = 3000
+SIMULATOR_DELAY = 5 # Seconds to wait before starting simulator
 
-# Absolute paths to target files
-API_PATH = SRC_DIR / "app" / "api.py"
-WEB_DIR = SRC_DIR / "app" / "web" / "ddos-protection-full"
-DUMMY_DATA_PATH = SRC_DIR / "app" / "dummy_data_stream.py"
+# Paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+NEXTJS_DIR = os.path.join(BASE_DIR, "src", "app", "web", "ddos-protection-full")
+STREAMLIT_EXPECTED_PATH = os.path.join(BASE_DIR, "src", "app", "web", "streamlit.py")
+SIMULATOR_PATH = os.path.join(BASE_DIR, "src", "app", "dummy_data_stream.py")
 
 processes = []
 
-def run_process(command, cwd=None, env=None):
-    """Helper to run a process in the background."""
-    print(f"[*] Starting: {' '.join(command)}")
-    p = subprocess.Popen(command, cwd=cwd, env=env)
+def log(message, level="INFO"):
+    print(f"[{level}] {message}")
+
+def check_npm():
+    return shutil.which("npm") is not None
+
+def run_api():
+    """Runs the FastAPI backend."""
+    log("Starting FastAPI Backend...")
+    # Using 'src.app.api:app' assuming main.py is in root
+    cmd = [sys.executable, "-m", "uvicorn", "src.app.api:app", "--host", "0.0.0.0", "--port", str(API_PORT)]
+    p = subprocess.Popen(cmd, cwd=BASE_DIR)
     processes.append(p)
     return p
 
+def run_simulator():
+    """Runs the Traffic Simulator."""
+    log("Starting Real-time Traffic Simulator...")
+    cmd = [sys.executable, SIMULATOR_PATH]
+    p = subprocess.Popen(cmd, cwd=BASE_DIR)
+    processes.append(p)
+    return p
+
+def run_streamlit():
+    """Runs the Streamlit Dashboard."""
+    log("Starting Streamlit Dashboard...")
+    cmd = [sys.executable, "-m", "streamlit", "run", STREAMLIT_EXPECTED_PATH, "--server.port", str(STREAMLIT_PORT)]
+    p = subprocess.Popen(cmd, cwd=BASE_DIR)
+    processes.append(p)
+    return p
+
+def run_nextjs():
+    """Runs the Next.js Frontend."""
+    if not os.path.exists(NEXTJS_DIR):
+        log(f"Next.js directory not found at {NEXTJS_DIR}", "WARNING")
+        return None
+
+    log("Starting Next.js Dashboard...")
+    
+    # Check if node_modules exists
+    if not os.path.exists(os.path.join(NEXTJS_DIR, "node_modules")):
+         log("node_modules not found. Installing dependencies (this may take a while)...", "WARNING")
+         subprocess.call(["npm", "install"], cwd=NEXTJS_DIR, shell=True)
+
+    cmd = ["npm", "run", "dev"]
+    # Update for Windows shell if needed
+    shell = True if platform.system() == "Windows" else False
+    
+    p = subprocess.Popen(cmd, cwd=NEXTJS_DIR, shell=shell)
+    processes.append(p)
+    return p
+
+def cleanup(signum, frame):
+    log("\nShutting down all services...", "INFO")
+    for p in processes:
+        try:
+            if platform.system() == "Windows":
+                 subprocess.call(['taskkill', '/F', '/T', '/PID', str(p.pid)])
+            else:
+                p.terminate()
+        except:
+            pass
+    sys.exit(0)
+
 def main():
-    print("="*60)
-    print("   SHIELDGUARD AI SYSTEM LAUNCHER")
-    print("   - API (FastAPI) : Port 8000")
-    print("   - Dashboard (Next.js + Shadcn) : Port 3000")
-    print("   - Traffic Simulator")
-    print("="*60)
+    signal.signal(signal.SIGINT, cleanup)
+    signal.signal(signal.SIGTERM, cleanup)
 
+    print("==================================================")
+    print("   SHIELDGUARD SOC - INTEGRATED LAUNCHER")
+    print("==================================================")
+
+    # 1. Start API (Critical)
+    api_proc = run_api()
+    time.sleep(3) # Give API time to startup
+
+    # 2. Start Streamlit (Always Fallback)
+    st_proc = run_streamlit()
+    
+    # 3. Try Next.js
+    npm_available = check_npm()
+    primary_url = f"http://localhost:{STREAMLIT_PORT}"
+    
+    if npm_available:
+        log("Node.js/NPM detected. Launching Advanced UI...")
+        next_proc = run_nextjs()
+        if next_proc:
+            primary_url = f"http://localhost:{NEXTJS_PORT}"
+            print(f"\n[SUCCESS] Services Running:")
+            print(f" > API: http://localhost:{API_PORT}")
+            print(f" > Streamlit (Fallback): http://localhost:{STREAMLIT_PORT}")
+            print(f" > Next.js (Primary): http://localhost:{NEXTJS_PORT}")
+        else:
+            print(f"\n[PARTIAL] API and Streamlit running. Next.js failed to start.")
+    else:
+        log("npm not found. Skipping Next.js.", "WARNING")
+        log("FALLBACK MODE ACTIVE: Using Streamlit Only.", "IMPORTANT")
+        print(f"\n[SUCCESS] Services Running (Fallback Mode):")
+        print(f" > API: http://localhost:{API_PORT}")
+        print(f" > Streamlit: http://localhost:{STREAMLIT_PORT}")
+
+    # 4. Start Simulator (Delayed to ensure API is ready)
+    log(f"Waiting {SIMULATOR_DELAY}s before starting traffic simulation...")
+    time.sleep(SIMULATOR_DELAY)
+    sim_proc = run_simulator()
+
+    # 5. Auto Open Browser
+    print(f"\n[LAUNCH] Opening Default Dashboard: {primary_url}")
     try:
-        # 1. Setup Environment
-        env = os.environ.copy()
-        current_pythonpath = env.get("PYTHONPATH", "")
-        env["PYTHONPATH"] = str(SRC_DIR) + os.pathsep + current_pythonpath
-        
-        # 2. Start FastAPI (Uvicorn)
-        print("[*] Launching API Core...")
-        proc_api = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"],
-            cwd=str(SRC_DIR),
-            env=env
-        )
-        processes.append(proc_api)
-        
-        # Wait a bit for API to come up
-        time.sleep(3)
-        
-        # 3. Start Web Dashboard (Next.js)
-        print("[*] Launching Next.js Dashboard...")
-        npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
-        
-        # Next.js runs on 3000 by default (npm run dev)
-        # We assume 'npm run dev' is mapped to 'next dev --port 3000' or default
-        proc_dashboard = subprocess.Popen(
-            [npm_cmd, "run", "dev"],
-            cwd=str(WEB_DIR),
-            env=env
-        )
-        processes.append(proc_dashboard)
+        webbrowser.open(primary_url)
+        # Also open fallback if primary is Next.js, just in case user wants both
+        if primary_url != f"http://localhost:{STREAMLIT_PORT}":
+             webbrowser.open(f"http://localhost:{STREAMLIT_PORT}")
+    except:
+        pass
 
-        # 4. Start Dummy Data Stream
-        print("[*] Starting Traffic Simulation...")
-        proc_dummy = subprocess.Popen(
-            [sys.executable, str(DUMMY_DATA_PATH)],
-            cwd=str(SRC_DIR),
-            env=env
-        )
-        processes.append(proc_dummy)
-        
-        print("\n[SUCCESS] All Systems Operational. Press Ctrl+C to stop.\n")
-        
-        # Keep main thread alive
+    # Keep alive
+    try:
         while True:
             time.sleep(1)
-            
-            # Check if processes are alive
-            if proc_api.poll() is not None:
-                print("[!] API process died.")
-                break
-            if proc_dashboard.poll() is not None:
-                print("[!] Dashboard process died.")
-                break
-
+            # Check if API died
+            if api_proc.poll() is not None:
+                log("API Process died! Exiting...", "ERROR")
+                cleanup(None, None)
     except KeyboardInterrupt:
-        print("\n[!] Stopping all services...")
-    finally:
-        for p in processes:
-            if p.poll() is None:
-                try:
-                    p.terminate()
-                except:
-                    pass
-        print("[*] Cleanup complete.")
+        cleanup(None, None)
 
 if __name__ == "__main__":
     main()

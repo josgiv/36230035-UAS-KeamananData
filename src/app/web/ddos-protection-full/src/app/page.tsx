@@ -371,25 +371,27 @@ export default function Dashboard() {
                 <CardTitle className="text-white text-lg">Traffic Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[200px] w-full flex items-center">
-                  <ResponsiveContainer width="60%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || "#fff"} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="h-[200px] w-full grid grid-cols-2 items-center">
+                  <div className="h-full w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={70}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || "#fff"} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                   <div className="flex flex-col gap-2 text-xs">
                     {pieData.map(d => (
                       <div key={d.name} className="flex items-center gap-2 text-slate-300">
